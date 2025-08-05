@@ -3,7 +3,7 @@
 ## Overview & Background
 This project shows how **AG2 agents** can help market researchers analyze multiple focus group session transcripts and generate a final, unified report. In this example, **two mock focus-group sessions** about a premium concept, **white strawberries**, are analyzed. The transcripts are **synthetic (AI-generated)** and designed to mimic realistic qualitative data.
 
-Quality is driven by an explicit **iterative feedback loop**. For each session, agents draft a report, then cycle through **review → revision → re-review** to catch mistakes, enforce structure, and strengthen evidence. After both sessions are finalized, a second loop **synthesizes** them into a **final unified report**, again with review/revision passes, to ensure the deliverable is clear, accurate, and decision-ready.
+Quality is driven by an explicit **iterative feedback loop**. For each focus group session, agents draft a report, then cycle through **review → revision → re-review** to catch mistakes, enforce structure, and strengthen evidence. After both session reports are finalized, a second loop **synthesizes** them into a **final unified report**, again with review/revision passes, to ensure the deliverable is clear, accurate, and decision-ready.
 
 **What this illustrates with AG2**
 - Automating transcript summarization and **in-depth analysis**  
