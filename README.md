@@ -3,6 +3,8 @@
 ## Overview & Background
 This project shows how **AG2 agents** can help market researchers analyze multiple focus group session transcripts and generate a final, unified report. In this example, **two mock focus-group sessions** about a premium concept, **white strawberries**, are analyzed. The transcripts are **synthetic (AI-generated)** and designed to mimic realistic qualitative data.
 
+**Solving a Market Research Pain Point**: Traditional focus group analysis requires researchers to manually sort through pages and pages of transcripts, identifying themes, extracting relevant quotes, and synthesizing insights across sessions—a process that can take days or even weeks. This AG2 workflow automates the most time-consuming aspects of transcript analysis, transforming hours of manual work into minutes of automated processing while maintaining analytical rigor and quality.
+
 Quality is driven by an explicit **iterative feedback loop**. For each focus group session, agents draft a report, then cycle through **review → revision → re-review** to catch mistakes, enforce structure, and strengthen evidence. After both session reports are finalized, a second loop **synthesizes** them into a **final unified report**, again with review/revision passes, to ensure the deliverable is clear, accurate, and decision-ready.
 
 **What this illustrates with AG2**
@@ -472,3 +474,5 @@ This synthesis compares/contrasts insights across the two sessions and age segme
 
 ## Conclusion
 This project pairs multi-agent specialization with explicit iterative feedback loops to transform two lengthy, synthetic focus-group transcripts into three decision-ready artifacts (two per-session reports + one unified synthesis). The repeated review → revision passes are the core of the approach—systematically elevating clarity, coverage, and accuracy before anything is marked "final."
+
+**Time Savings & Efficiency**: What traditionally requires researchers to spend hours manually combing through transcripts, coding responses, and cross-referencing themes is now accomplished in minutes through automated agent workflows. This AG2 implementation saves significant time while maintaining the analytical depth and rigor that market research demands, allowing researchers to focus on strategic interpretation and decision-making rather than tedious transcript processing.
