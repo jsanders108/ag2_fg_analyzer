@@ -1,9 +1,11 @@
 # AG2: Focus Group Transcript Analyzer
 
 ## Overview & Background
-This project shows how **AG2 agents** can help market researchers analyze multiple focus group session transcripts and generate a final, unified report. In this example, **two mock focus-group sessions** about a premium concept, **white strawberries**, are analyzed. The transcripts are **synthetic (AI-generated)** and designed to mimic realistic qualitative data.
+**The Challenge**: Market researchers spend days or weeks manually sorting through pages of focus group transcripts, identifying themes, extracting quotes, and synthesizing insights—one of the most time-consuming aspects of qualitative research.
 
-**Solving a Market Research Pain Point**: Traditional focus group analysis requires researchers to manually sort through pages and pages of transcripts, identifying themes, extracting relevant quotes, and synthesizing insights across sessions—a process that can take days or even weeks. This AG2 workflow automates the most time-consuming aspects of transcript analysis, transforming hours of manual work into minutes of automated processing while maintaining analytical rigor and quality.
+**The Solution**: This project demonstrates how AG2 agents can automate focus group transcript analysis, transforming hours of manual work into minutes of automated processing while maintaining analytical rigor and quality.
+
+This example analyzes focus group transcripts from **two mock sessions** about a premium concept: **white strawberries**. The transcripts are **synthetic (AI-generated)** and designed to mimic realistic qualitative data.
 
 Quality is driven by an explicit **iterative feedback loop**. For each focus group session, agents draft a report, then cycle through **review → revision → re-review** to catch mistakes, enforce structure, and strengthen evidence. After both session reports are finalized, a second loop **synthesizes** them into a **final unified report**, again with review/revision passes, to ensure the deliverable is clear, accurate, and decision-ready.
 
@@ -34,6 +36,14 @@ The mock focus groups were designed to explore:
    Compare **pre- vs. post-exposure interest**, record **favorite concept votes**, and gauge **WTP** relative to red strawberries; surface barriers and how to address them.
 
 Interviews follow a **discussion guide (Q1–Q7)** to reflect common qualitative research structure under realistic time and resource constraints.
+
+---
+
+## Who This Is For
+- **Market Research Teams** looking to scale qualitative analysis
+- **Agencies** managing multiple client studies simultaneously  
+- **Product Teams** needing rapid consumer insights
+- **Researchers** seeking to focus on strategy rather than transcript processing
 
 ---
 
@@ -101,6 +111,6 @@ This synthesis compares/contrasts insights across the two sessions and age segme
 ---
 
 ## Conclusion
-This project pairs multi-agent specialization with explicit iterative feedback loops to transform two lengthy, synthetic focus-group transcripts into three decision-ready artifacts (two per-session reports + one unified synthesis). The repeated review → revision passes are the core of the approach—systematically elevating clarity, coverage, and accuracy before anything is marked "final."
+This project pairs multi-agent specialization with explicit iterative feedback loops to transform two lengthy, synthetic focus-group transcripts into three decision-ready insights (two per-session reports + one unified synthesis). The repeated review → revision passes are the core of the approach—systematically elevating clarity, coverage, and accuracy before anything is marked "final."
 
-**Time Savings & Efficiency**: What traditionally requires researchers to spend hours manually combing through transcripts, coding responses, and cross-referencing themes is now accomplished in minutes through automated agent workflows. This AG2 implementation saves significant time while maintaining the analytical depth and rigor that market research demands, allowing researchers to focus on strategic interpretation and decision-making rather than tedious transcript processing.
+**Time Savings & Efficiency**: A typical two-session focus group analysis that would normally require 8-12 hours (or more) of manual work is completed in under 5 minutes with this AG2 workflow, while maintaining the analytical depth and rigor that market research demands. This allows researchers to focus on strategic interpretation and decision-making rather than tedious transcript processing.
