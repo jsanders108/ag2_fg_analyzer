@@ -1,7 +1,7 @@
 # AG2: Focus Group Transcript Analyzer
 
 ## Overview & Background
-This project shows how **AG2 agents** can help market researchers analyze **two mock focus-group sessions** about a premium concept: **white strawberries**. The transcripts are **synthetic (AI-generated)** and designed to mimic realistic qualitative data and team workflows.
+This project shows how **AG2 agents** can help market researchers analyze multiple focus group session transcripts and generate a final, unified report. In this example, **two mock focus-group sessions** about a premium concept: **white strawberries** are analyzed. The transcripts are **synthetic (AI-generated)** and designed to mimic realistic qualitative data and team workflows.
 
 Quality is driven by an explicit **iterative feedback loop**. For each session, agents draft a report, then cycle through **review → revision → re-review** to catch mistakes, enforce structure, and strengthen evidence. After both sessions are finalized, a second loop **synthesizes** them into a **final unified report**, again with review/revision passes, to ensure the deliverable is clear, accurate, and decision-ready.
 
