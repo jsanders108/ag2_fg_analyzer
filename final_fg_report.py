@@ -81,22 +81,6 @@ def start_report_creation_process(
         context_variables=context_variables,
     )
 
-'''
-#TODO: Need to loop this for number of sessions
-def read_fg_reports():
-    """Read the session reports from files"""
-    with open("reports/fg_1_report.md", "r", encoding="utf-8") as f:
-        fg_1_report = f.read()
-
-    with open("reports/fg_2_report.md", "r", encoding="utf-8") as f:
-        fg_2_report = f.read()
-
-    with open("reports/fg_3_report.md", "r", encoding="utf-8") as f:
-        fg_3_report = f.read()    
-        
-    return fg_1_report, fg_2_report, fg_3_report 
-
-'''
 
 def read_fg_reports(num_sessions: int) -> list[str]:
     """Dynamically read individual focus group reports. The number of focus group reports (sessions) is passed as an argument."""
@@ -560,6 +544,7 @@ def run_final_fg_report(num_sessions: int):
         print("Report creation did not complete successfully.")
         if final_context.get("has_error"):
             print(f"Error during {final_context.get('error_stage')} stage: {final_context.get('error_message')}")
+
 
 
 
