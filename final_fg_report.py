@@ -1,5 +1,28 @@
-# Feedback Loop pattern for iterative document refinement
-# Each agent refines the analysis of the transcript, which is then sent back for further iterations based on feedback
+# ---------------------------------------------------------------------
+# Feedback Loop Pattern for Iterative Document Refinement (AG2)
+# ---------------------------------------------------------------------
+# This script synthesizes a *final* focus group report by orchestrating
+# multiple AG2 agents in a structured feedback loop:
+#
+#   1) entry_agent          → Starts the workflow.
+#   2) report_draft_agent   → Drafts the synthesized final report (from existing per-session reports).
+#   3) review_agent         → Critically evaluates the draft and submits structured feedback.
+#   4) revision_agent       → Applies feedback; either loops for another review or proceeds to finalize.
+#   5) finalization_agent   → Polishes and finalizes the report, then terminates the workflow.
+#
+# Key Ideas:
+#   • ContextVariables store loop state (stage, iteration count) and artifacts (draft, feedback, revised, final).
+#   • OnContextCondition routes control between agents based on shared context flags.
+#   • Pydantic models (ReportDraft, FeedbackCollection, RevisedReport, FinalReport) enforce typed payloads.
+#
+# Expected Files & Folders:
+#   • Input:  reports/fg_1_report.md, reports/fg_2_report.md, ... (individual session reports)
+#   • Input:  instructions/final_synthesized_fg_report_task_instructions.md
+#   • Output: reports/final_unified_fg_report.md
+#
+# Note: System messages mention tools "read_session_reports" in some places;
+# the actual function is read_fg_reports(). This is intentional to preserve your code.
+# ---------------------------------------------------------------------
 
 from typing import Annotated, Optional, Any
 from enum import Enum
@@ -15,39 +38,51 @@ from autogen.agentchat import initiate_group_chat
 from autogen.agentchat.group import AgentTarget, ContextVariables, ReplyResult, TerminateTarget, OnContextCondition, ExpressionContextCondition, RevertToUserTarget
 from autogen.agentchat.group.patterns import DefaultPattern
 
-
 from dotenv import load_dotenv
 import os
 
+# Load environment variables (e.g., OPENAI_API_KEY)
 load_dotenv()
 
+# ---------------------------------------------------------------------
+# LLM Configuration (shared across all agents)
+# ---------------------------------------------------------------------
+# "tool_choice" = "required" enforces tool-calling behavior—critical for
+# ensuring each stage submits via the correct function.
 llm_config = LLMConfig(
     api_type="openai",
     #model="gpt-4.1",
     model="gpt-4.1-mini",
     api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0,
+    temperature=0,           # Deterministic outputs aid repeatability
     cache_seed=None,
     parallel_tool_calls=False,
     tool_choice="required"
 )
 
+# Feedback severity taxonomy (used in comments/instructions):
+#   minor, moderate, major, critical
 
-# Feedback severity: minor, moderate, major, critical
-
-# Report stage tracking for the feedback loop
+# ---------------------------------------------------------------------
+# Workflow Stage Tracking
+# ---------------------------------------------------------------------
+# Drives OnContextCondition routing between agents via shared context.
 class ReportStage(str, Enum):
     CREATE = "create"
     REVIEW = "review"
     REVISE = "revise"
     FINALIZE = "finalize" 
 
-# Shared context for tracking document state
+# ---------------------------------------------------------------------
+# Shared Context (single run)
+# ---------------------------------------------------------------------
+# This ContextVariables holds *all* state and artifacts for the run.
+# Agents mutate this object to pass work along the pipeline.
 shared_context = ContextVariables(data={
     # Feedback loop state 
     "loop_started": False,
     "current_iteration": 0,
-    "max_iterations": 2,
+    "max_iterations": 2,       # Guardrail to avoid infinite loops
     "iteration_needed": True,
     "current_stage": ReportStage.CREATE,
  
@@ -57,23 +92,25 @@ shared_context = ContextVariables(data={
     "revised_report": {},
     "final_report": {},
 
-    # Error state
+    # Error state (helps surface missing files, etc.)
     "has_error": False,
     "error_message": "",
     "error_stage": ""
 }) 
 
+# ---------------------------------------------------------------------
+# Stage-Transition & I/O Functions (tool-called by agents)
+# ---------------------------------------------------------------------
 
-
-# Functions for the feedback loop pattern
 def start_report_creation_process(
     context_variables: ContextVariables
 ) -> ReplyResult:
     """
-    Start the report creation process
+    Initialize the loop, set stage to CREATE, and bump iteration to 1.
+    This is called by entry_agent to kick off the pipeline.
     """
-    context_variables["loop_started"] = True # Drives OnContextCondition to the next agent
-    context_variables["current_stage"] = ReportStage.CREATE.value # Drives OnContextCondition to the next agent
+    context_variables["loop_started"] = True  # Drives OnContextCondition to the next agent
+    context_variables["current_stage"] = ReportStage.CREATE.value  # Drives OnContextCondition to the next agent
     context_variables["current_iteration"] = 1
 
     return ReplyResult(
@@ -81,9 +118,12 @@ def start_report_creation_process(
         context_variables=context_variables,
     )
 
-
 def read_fg_reports(num_sessions: int) -> list[str]:
-    """Dynamically read individual focus group reports. The number of focus group reports (sessions) is passed as an argument."""
+    """
+    Load the *individual* focus group reports that will be synthesized.
+    - Expected paths: reports/fg_{i}_report.md for i in [1..num_sessions]
+    - Raises FileNotFoundError if any expected report is missing.
+    """
     reports = []
 
     for i in range(1, num_sessions + 1):
@@ -92,15 +132,15 @@ def read_fg_reports(num_sessions: int) -> list[str]:
             with open(report_path, "r", encoding="utf-8") as f:
                 reports.append(f.read())
         else:
+            # Fail fast so the calling agent can surface the issue
             raise FileNotFoundError(f"Report file not found: {report_path}")
 
     return reports
 
-
 def read_task_instructions(context_variables: ContextVariables) -> str:
     """
-    Reads the markdown instructions for the final synthesized focus group report task.
-    If the file is missing, stores error context and re-raises the exception.
+    Load the Markdown instructions for the *final synthesized* report task.
+    If missing, record error info in context and re-raise the exception.
     """
     file_path = "instructions/final_synthesized_fg_report_task_instructions.md"
     try:
@@ -112,8 +152,13 @@ def read_task_instructions(context_variables: ContextVariables) -> str:
         context_variables["error_message"] = str(err)
         raise
 
+# ---------------------------------------------------------------------
+# Data Models & Submission Functions for Each Stage
+# ---------------------------------------------------------------------
+# These functions are invoked by agents to persist structured artefacts
+# into shared_context and to advance the workflow stage.
 
-# Report Drafting Stage
+# ------------------ Draft ------------------
 class ReportDraft(BaseModel):
     title: str = Field(..., description="Report title")
     content: str = Field(..., description="Full text content of the draft")
@@ -124,22 +169,21 @@ def submit_report_draft(
     context_variables: ContextVariables
 ) -> ReplyResult:
     """
-    Submit the report draft for review
+    Persist the initial synthesized draft and advance to REVIEW.
     """
     report_draft = ReportDraft(
         title=title,
         content=content
     )
     context_variables["report_draft"] = report_draft.model_dump()
-    context_variables["current_stage"] = ReportStage.REVIEW.value # Drives OnContextCondition to the next agent
+    context_variables["current_stage"] = ReportStage.REVIEW.value  # Drives OnContextCondition to the next agent
 
     return ReplyResult(
         message="Report draft submitted. Moving to review stage.",
         context_variables=context_variables,
     )
 
-
-# Report Feedback Stage
+# ------------------ Feedback ------------------
 class FeedbackItem(BaseModel):
     section: str = Field(..., description="Section of the report the feedback applies to")
     feedback: str = Field(..., description="Detailed feedback")
@@ -160,7 +204,7 @@ def submit_feedback(
     context_variables: ContextVariables
 ) -> ReplyResult:
     """
-    Submit feedback on the report
+    Persist structured review feedback and advance to REVISE.
     """
     feedback = FeedbackCollection(
         items=items,
@@ -170,15 +214,14 @@ def submit_feedback(
     )
     context_variables["feedback_collection"] = feedback.model_dump()
     context_variables["iteration_needed"] = feedback.iteration_needed
-    context_variables["current_stage"] = ReportStage.REVISE.value # Drives OnContextCondition to the next agent
+    context_variables["current_stage"] = ReportStage.REVISE.value  # Drives OnContextCondition to the next agent
 
     return ReplyResult(
         message="Feedback submitted. Moving to revision stage.",
         context_variables=context_variables,
     )
 
-
-# Report Revision Stage
+# ------------------ Revision ------------------
 class RevisedReport(BaseModel):
     title: str = Field(..., description="Report title")
     content: str = Field(..., description="Full text content after revision")
@@ -191,7 +234,8 @@ def submit_revised_report(
     context_variables: ContextVariables
 ) -> ReplyResult:
     """
-    Submit the revised report, which may lead to another feedback loop or finalization
+    Persist the revised draft; either loop back to REVIEW (if iteration still
+    needed and under max_iterations) or advance to FINALIZE.
     """
     revised = RevisedReport(
         title=title,
@@ -200,12 +244,12 @@ def submit_revised_report(
     )
     context_variables["revised_report"] = revised.model_dump()
 
-     # Check if we need another iteration or if we're done
+    # Loop control: either another review round or finalize
     if context_variables["iteration_needed"] and context_variables["current_iteration"] < context_variables["max_iterations"]:
         context_variables["current_iteration"] += 1
         context_variables["current_stage"] = ReportStage.REVIEW.value
 
-        # Update the document draft with the revised document for the next review
+        # Prepare the next review cycle with the updated draft
         context_variables["report_draft"] = {
             "title": revised.title,
             "content": revised.content,
@@ -216,15 +260,15 @@ def submit_revised_report(
             context_variables=context_variables,
         )
     else:
-        # We're done with revisions, move to final stage
-        context_variables["current_stage"] = ReportStage.FINALIZE.value # Drives OnContextCondition to the next agent
+        # No further iterations requested or limit reached → finalize
+        context_variables["current_stage"] = ReportStage.FINALIZE.value  # Drives OnContextCondition to the next agent
 
         return ReplyResult(
             message="Revisions complete. Moving to report finalization.",
             context_variables=context_variables,
         )
 
-# Report Finalization Stage
+# ------------------ Finalization ------------------
 class FinalReport(BaseModel):
     title: str = Field(..., description="Final report title")
     content: str = Field(..., description="Full text content of the final report")
@@ -235,7 +279,7 @@ def finalize_report(
     context_variables: ContextVariables
 ) -> ReplyResult:
     """
-    Submit the final report and complete the feedback loop
+    Persist the final report, mark iteration as complete, and terminate workflow.
     """
     final = FinalReport(
         title=title,
@@ -250,9 +294,11 @@ def finalize_report(
         context_variables=context_variables,
     )
 
-
+# ---------------------------------------------------------------------
+# Agent Definitions
+# ---------------------------------------------------------------------
 with llm_config:
-    # Agents for the feedback loop
+    # entry_agent: flip shared state to begin the CREATE stage.
     entry_agent = ConversableAgent(
         name="entry_agent",
         system_message="""You are the entry point for the report creation process.
@@ -262,8 +308,8 @@ with llm_config:
         functions=[start_report_creation_process]
     )
 
-    
-
+    # report_draft_agent: reads per-session reports + task instructions to write the first synthesized draft.
+    # NOTE: System prompt mentions read_session_reports in prose, but the actual tool is read_fg_reports().
     report_draft_agent = ConversableAgent(
         name="report_draft_agent",
         
@@ -306,7 +352,8 @@ with llm_config:
         ]
      )
 
-
+    # review_agent: evaluates the synthesized draft against instructions and the session reports; submits structured feedback.
+    # NOTE: System prompt mentions read_session_reports in prose; tool is read_fg_reports().
     review_agent = ConversableAgent(
         name="review_agent",
         system_message="You are the report review agent responsible for critical evaluation.",
@@ -366,7 +413,7 @@ with llm_config:
         ]
      )
 
-
+    # revision_agent: implements feedback, tracks changes, and either loops or advances to finalize.
     revision_agent = ConversableAgent(
         name="revision_agent",
         system_message="""
@@ -408,6 +455,7 @@ with llm_config:
         functions=[submit_revised_report, read_task_instructions]
     )
 
+    # finalization_agent: performs last-mile polish + compliance check, then submits the final artifact.
     finalization_agent = ConversableAgent(
         name="finalization_agent",
         system_message="""
@@ -447,14 +495,21 @@ with llm_config:
         functions=[finalize_report, read_task_instructions]
     )
 
-# User agent for interaction
+# ---------------------------------------------------------------------
+# User Agent: non-executing proxy (for logging/visibility in the pattern)
+# ---------------------------------------------------------------------
 user = UserProxyAgent(
     name="user",
     code_execution_config=False
 )
 
-# Register handoffs for the feedback loop
-# Entry agent starts the loop
+# ---------------------------------------------------------------------
+# Handoff Rules (Context-Driven Routing Between Agents)
+# ---------------------------------------------------------------------
+# Each rule inspects the shared context and routes control to the next agent.
+# after_work behavior clarifies where control goes once an agent completes.
+
+# Entry agent → Draft agent when loop has started and stage == CREATE
 entry_agent.handoffs.add_context_condition(
     OnContextCondition(
         target=AgentTarget(report_draft_agent),
@@ -463,8 +518,7 @@ entry_agent.handoffs.add_context_condition(
 )
 entry_agent.handoffs.set_after_work(RevertToUserTarget())
 
-
-# Report draft agent passes to Planning agent
+# Draft agent → Review agent when stage == REVIEW
 report_draft_agent.handoffs.add_context_condition(
     OnContextCondition(
         target=AgentTarget(review_agent),
@@ -473,7 +527,7 @@ report_draft_agent.handoffs.add_context_condition(
 )
 report_draft_agent.handoffs.set_after_work(RevertToUserTarget())
 
-# Report review agent passes to Planning agent
+# Review agent → Revision agent when stage == REVISE
 review_agent.handoffs.add_context_condition(
     OnContextCondition(
         target=AgentTarget(revision_agent),
@@ -482,8 +536,7 @@ review_agent.handoffs.add_context_condition(
 )
 review_agent.handoffs.set_after_work(RevertToUserTarget())
 
-
-# Revision agent passes back to Review agent or to Finalization agent
+# Revision agent → either Finalization (stage == FINALIZE) or back to Review (stage == REVIEW)
 revision_agent.handoffs.add_context_conditions(
     [
         OnContextCondition(
@@ -496,13 +549,15 @@ revision_agent.handoffs.add_context_conditions(
         )
     ]
 )
+# Default after_work nudges toward finalization once revision is done.
 revision_agent.handoffs.set_after_work(AgentTarget(finalization_agent)) 
 
-# Finalization agent completes the loop and terminates the workflow
+# Finalization agent terminates the workflow to signal completion.
 finalization_agent.handoffs.set_after_work(TerminateTarget())
 
- 
-# Run the feedback loop
+# ---------------------------------------------------------------------
+# Entrypoint (run the feedback loop for the final synthesized report)
+# ---------------------------------------------------------------------
 def run_final_fg_report(num_sessions: int): 
     """Run the feedback loop pattern for report creation with iterative refinement"""
     print("Initiating Feedback Loop Pattern for Report Creation...")
@@ -531,7 +586,7 @@ def run_final_fg_report(num_sessions: int):
 
         final_report_content = final_context['final_report'].get('content', '')
        
-        # Write final report to a Markdown file
+        # Persist final synthesized report
         os.makedirs("reports", exist_ok=True)
         with open("reports/final_unified_fg_report.md", "w", encoding="utf-8") as f:
             f.write(final_report_content)
@@ -540,9 +595,6 @@ def run_final_fg_report(num_sessions: int):
         print("Report creation did not complete successfully.")
         if final_context.get("has_error"):
             print(f"Error during {final_context.get('error_stage')} stage: {final_context.get('error_message')}")
-
-
-
 
 
 
