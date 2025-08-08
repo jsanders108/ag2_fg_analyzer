@@ -503,12 +503,6 @@ finalization_agent.handoffs.set_after_work(TerminateTarget())
 
  
 # Run the feedback loop
-
-#TODO: For multiple sessions, create a loop that runs the feedback loop pattern for each session
-# Will need to make sure the context variables are reset for each session
-# Will need to make sure the final report is saved for each session
-# Will need to make sure the correct session files are read
-
 def run_final_fg_report(num_sessions: int): 
     """Run the feedback loop pattern for report creation with iterative refinement"""
     print("Initiating Feedback Loop Pattern for Report Creation...")
@@ -544,6 +538,7 @@ def run_final_fg_report(num_sessions: int):
         print("Report creation did not complete successfully.")
         if final_context.get("has_error"):
             print(f"Error during {final_context.get('error_stage')} stage: {final_context.get('error_message')}")
+
 
 
 
