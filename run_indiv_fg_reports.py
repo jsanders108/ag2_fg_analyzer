@@ -556,6 +556,8 @@ def run_indiv_fg_reports(session_num: int):
     if final_context.get("final_report"):
         print("Report creation completed successfully!")
 
+        final_report_content = final_context['final_report'].get('content', '')
+        
         # Write final report to a Markdown file
         os.makedirs("reports", exist_ok=True)
         with open(f"reports/fg_{session_num}_report.md", "w", encoding="utf-8") as f:
@@ -566,5 +568,6 @@ def run_indiv_fg_reports(session_num: int):
         print("Report creation did not complete successfully.")
         if final_context.get("has_error"):
             print(f"Error during {final_context.get('error_stage')} stage: {final_context.get('error_message')}")
+
 
 
